@@ -65,12 +65,6 @@
 
 // #include <Exp_mat.h>
 
-
-#ifndef DEPLOY
-#include "matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-#endif
-
 #define INIT_TIME           (0)
 #define LASER_POINT_COV     (0.0015)
 #define NUM_MATCH_POINTS    (5)
@@ -641,9 +635,8 @@ int main(int argc, char** argv)
             ("/mavros/odometry/out", 10);
     ros::Publisher pubPath          = nh.advertise<nav_msgs::Path> 
             ("/path", 10);
-#ifdef DEPLOY
     ros::Publisher mavros_pose_publisher = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 10);
-#endif
+
     geometry_msgs::PoseStamped msg_body_pose;
     nav_msgs::Path path;
     path.header.stamp    = ros::Time::now();
@@ -1308,9 +1301,8 @@ int main(int argc, char** argv)
             msg_body_pose.pose.orientation.y = geoQuat.y;
             msg_body_pose.pose.orientation.z = geoQuat.z;
             msg_body_pose.pose.orientation.w = geoQuat.w;
-            #ifdef DEPLOY
+
             mavros_pose_publisher.publish(msg_body_pose);
-            #endif
 
             /******* Publish Path ********/
             msg_body_pose.header.frame_id = "slam_map";
@@ -1352,23 +1344,6 @@ int main(int argc, char** argv)
     // pcd_writer.writeBinary(surf_filename, surf_points);
     // pcd_writer.writeBinary(corner_filename, corner_points);
     // }
-
-    /* #ifndef DEPLOY
-    if (!T1.empty())
-    {
-        // plt::named_plot("add new frame",T1,s_plot2);
-        // plt::named_plot("search and pca",T1,s_plot3);
-        // plt::named_plot("newpoints number",T1,s_plot4);
-        plt::named_plot("total time",T1,s_plot5);
-        plt::named_plot("average time",T1,s_plot);
-        // plt::named_plot("readd",T2,s_plot6);
-        plt::legend();
-        plt::show();
-        plt::pause(0.5);
-        plt::close();
-    }
-    std::cout << "no points saved";
-    #endif */
 
     return 0;
 }

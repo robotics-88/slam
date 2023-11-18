@@ -11,7 +11,7 @@
     <arg name="imu_topic" value="$(arg imu_topic)"/>
   </include>
 
-  <node pkg="tf" type="static_transform_publisher" name="slam_map_broadcaster" args="0 0 0 0 0 0 map slam_map 100" />
+  <!-- <node pkg="tf" type="static_transform_publisher" name="slam_map_broadcaster" args="0 0 0 0 0 0 map slam_map 100" /> -->
 
   <arg name="rviz" default="true"/>
   <node  pkg="rviz" type="rviz" name="rviz" args="-d $(find path_planning)/launch/demo.rviz" if="$(arg rviz)"/>
