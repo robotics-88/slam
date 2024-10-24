@@ -8,6 +8,7 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/point_stamped.hpp"
 #include "std_msgs/msg/int64.hpp"
+#include <pcl/filters/passthrough.h>
 
 #include <iostream>
 #include <fstream>

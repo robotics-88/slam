@@ -1,5 +1,7 @@
 #include "path_searching/kinodynamic_astar.h"
 #include <sstream>
+#include <rclcpp/parameter_client.hpp>
+#include <rclcpp/executors.hpp>
 
 using namespace std;
 using namespace Eigen;
@@ -10,7 +12,6 @@ using namespace Eigen;
 KinodynamicAstar::KinodynamicAstar(const std::shared_ptr<rclcpp::Node>& node) 
   : node_(node)
 {
-  universal_altitude_service_ = node_->create_service<rcl_interfaces::srv::SetParametersAtomically>("universal_altitude_params", std::bind(&KinodynamicAstar::setAltitudeParams, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
 KinodynamicAstar::~KinodynamicAstar()
@@ -139,26 +140,30 @@ bool KinodynamicAstar::isSafe(double x, double y,double z){
   return true;
 }
 
-
-bool KinodynamicAstar::setAltitudeParams(const std::shared_ptr<rmw_request_id_t>/*request_header*/,
-                        const std::shared_ptr<rcl_interfaces::srv::SetParametersAtomically::Request> req,
-                        const std::shared_ptr<rcl_interfaces::srv::SetParametersAtomically::Response> resp) {
-  for (int ii = 0; ii < req->parameters.size(); ii++) {
-    if (req->parameters.at(ii).name == "max_alt") {
-      max_alt_ = req->parameters.at(ii).value.double_value;
-    }
-    else if (req->parameters.at(ii).name == "min_alt") {
-      min_alt_ = req->parameters.at(ii).value.double_value;
-    }
-  }
-  auto result = rcl_interfaces::msg::SetParametersResult();
-  result.successful = true;
-  resp->result = result;
-}
-
 int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, Eigen::Vector3d start_a,
                              Eigen::Vector3d end_pt, Eigen::Vector3d end_v, bool init, bool dynamic, double time_start)
 {
+  auto node = rclcpp::Node::make_shared("parameter_client_node");
+  auto parameters_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "task_manager");
+
+  std::vector<std::string> parameter_names = {"min_alt", "max_alt"};
+  auto get_parameters_future = parameters_client->get_parameters(parameter_names);
+  // Set a callback to handle the result
+  if (rclcpp::spin_until_future_complete(node, get_parameters_future) ==
+      rclcpp::FutureReturnCode::SUCCESS)
+  {
+    auto parameters = get_parameters_future.get();
+    for (auto & parameter : parameters) {
+      if (parameter.get_name() == "max_alt") {
+        max_alt_ = parameter.as_double();
+      }
+      else if (parameter.get_name()== "min_alt") {
+        min_alt_ = parameter.as_double();
+      }
+    }
+  } else {
+      RCLCPP_ERROR(node_->get_logger(), "Failed to get min/max alt params for path planner");
+  }
 
   rclcpp::Time t1 = node_->get_clock()->now();
 
@@ -216,6 +221,10 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
                     abs(cur_node->index(1) - end_index(1)) <= tolerance &&
                     abs(cur_node->index(2) - end_index(2)) <= tolerance;
 
+    rclcpp::Time twhile = node_->get_clock()->now();
+    if (twhile.seconds() - t1.seconds() > 3.0) {
+        return NO_PATH;
+    }
     if (reach_horizon || near_end)
     {
       terminate_node = cur_node;
